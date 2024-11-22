@@ -1,0 +1,45 @@
+name: "laravel_3dsecure"
+
+services:
+  nginx:
+    container_name: laravel_3dsecure_nginx
+    image: nginx:1.26
+    ports:
+      - 80:80
+    volumes:
+      - ./laravel:/var/www/html/laravel
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - php
+
+  php:
+    container_name: laravel_3dsecure_php
+    ports:
+      - 5173:5173
+    build: 
+      context: .
+      dockerfile: ./docker/php/dockerfile
+    volumes:
+      - ./laravel:/var/www/html/laravel
+      - ./docker/php/www.conf:/etc/php-fpm.d/www.conf
+    depends_on:
+      - mysql
+  
+  mysql:
+    container_name: laravel_3dsecure_mysql
+    image: mysql:8.4
+    environment:
+      - MYSQL_DATABASE=3dsecure
+      - MYSQL_USER=3dsecure
+      - MYSQL_PASSWORD=password
+      - MYSQL_ROOT_PASSWORD=password
+  
+  pma:
+    container_name: laravel_3dsecure_pma
+    image: phpmyadmin:5.2
+    environment:
+      - PMA_HOST=laravel_3dsecure_mysql
+    ports:
+      - 8080:80
+    depends_on:
+      - mysql

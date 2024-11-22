@@ -1,0 +1,20 @@
+FROM almalinux:8.10
+
+RUN dnf -y update
+RUN dnf -y install unzip
+
+# PHP
+RUN mkdir /run/php-fpm
+RUN dnf -y install epel-release
+RUN dnf -y install https://rpms.remirepo.net/enterprise/remi-release-8.rpm
+RUN dnf module enable -y php:remi-8.4
+RUN dnf -y install php php-fpm php-mysqlnd
+
+# Composer
+COPY --from=composer:2.8.3 /usr/bin/composer /usr/bin/composer
+
+COPY ./laravel /var/www/html/laravel
+WORKDIR /var/www/html/laravel
+
+EXPOSE 9000
+CMD ["php-fpm", "-F"]
