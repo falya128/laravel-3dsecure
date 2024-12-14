@@ -36,16 +36,13 @@ composer install
 
 ```bash
 cp .env.example .env
+php artisan key:generate
+chown -R nginx. /var/www/html/laravel/storage
 ```
 
-以下の箇所を変更
+`.env` は以下の箇所を変更
 
 ```
 PAYJP_PUBLIC_KEY=[PAY.JP API設定から取得した公開鍵]
 PAYJP_SECRET_KEY=[PAY.JP API設定から取得した秘密鍵]
-```
-
-```bash
-php artisan key:generate
-chown -R nginx. /var/www/html/laravel/storage
 ```
