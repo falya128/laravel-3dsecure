@@ -23,13 +23,14 @@ class PayController extends Controller
         }
         $body = json_decode($response->getBody()->getContents(), true);
 
-        // 支払いIDをセッションに保存（リダイレクトに取得するため）
+        // 支払いIDをセッションに保存（リダイレクト後に取得するため）
         $request->session()->put('pay_id', $body['id']);
 
-        // PAY.JP側へリダイレクト
+        // PAY.JPへリダイレクト
+        $backUrl = url('/callback');
         $query = http_build_query([
             'publickey' => config('pay.public_key'),
-            'back_url' => JWT::encode(['url' => url('/callback')], config('pay.secret_key'), 'HS256'),
+            'back_url' => JWT::encode(['url' => $backUrl], config('pay.secret_key'), 'HS256'),
         ]);
 
         return redirect("https://api.pay.jp/v1/tds/{$body['id']}/start?{$query}");
@@ -51,7 +52,7 @@ class PayController extends Controller
         }
         $body = json_decode($response->getBody()->getContents(), true);
 
-        // 完全認証の場合はアテンプト（3Dセキュア未登録のカードで決済）をエラーとして扱う
+        // 3Dセキュア未登録のカードはエラーとして扱う
         $threeDSecureStatus = $body['three_d_secure_status'];
         if ($threeDSecureStatus === 'attempted') {
             return redirect('payment')->with('errorMessage', 'ご利用のカードは使用できません。');
@@ -76,13 +77,16 @@ class PayController extends Controller
             'auth' => [config('pay.secret_key'), ''],
         ]);
         try {
-            return $client->request('POST', 'https://api.pay.jp/v1/charges', ['form_params' => [
-                'amount' => $amount,
-                'currency' => 'jpy',
-                'card' => $token,
-                'three_d_secure' => 'true',
-                'capture' => 'false',   // 'false' の場合は支払いを確定せずに、カードの認証と支払い額のみ確保
-            ]]);
+            $uri = 'https://api.pay.jp/v1/charges';
+
+            return $client->request('POST', $uri, [
+                'form_params' => [
+                    'amount' => $amount,
+                    'currency' => 'jpy',
+                    'card' => $token,
+                    'three_d_secure' => 'true',
+                ],
+            ]);
         } catch (ClientException $e) {
             return $e->getResponse();
         }
@@ -95,7 +99,9 @@ class PayController extends Controller
     {
         $client = new Client(['auth' => [config('pay.secret_key'), '']]);
         try {
-            return $client->request('GET', "https://api.pay.jp/v1/charges/{$payId}");
+            $uri = "https://api.pay.jp/v1/charges/{$payId}";
+
+            return $client->request('GET', $uri);
         } catch (ClientException $e) {
             return $e->getResponse();
         }
@@ -111,7 +117,9 @@ class PayController extends Controller
             'auth' => [config('pay.secret_key'), ''],
         ]);
         try {
-            return $client->request('POST', "https://api.pay.jp/v1/charges/{$payId}/tds_finish");
+            $uri = "https://api.pay.jp/v1/charges/{$payId}/tds_finish";
+
+            return $client->request('POST', $uri);
         } catch (ClientException $e) {
             return $e->getResponse();
         }
